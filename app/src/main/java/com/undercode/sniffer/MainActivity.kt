@@ -266,39 +266,77 @@ class MainActivity : AppCompatActivity() {
         search.hint = "Buscar app…"
         search.setSingleLine()
         val lv = ListView(this)
+        lv.isFastScrollEnabled = true
+        lv.divider = null
         box.addView(search)
         box.addView(lv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(380)))
 
-        var shown: List<AppItem> = all
-        val ad = ArrayAdapter(this, android.R.layout.simple_list_item_1, ArrayList(all))
-        lv.adapter = ad
-        search.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
-            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val q = s.toString().trim().lowercase()
-                shown = all.filter { q.isEmpty() || it.label.lowercase().contains(q) || (it.pkg ?: "").contains(q) }
-                ad.clear()
-                ad.addAll(shown)
-                ad.notifyDataSetChanged()
-            }
-        })
         val dlg = AlertDialog.Builder(this)
             .setTitle("Elegir app a capturar")
             .setView(box)
             .setNegativeButton("Cancelar", null)
             .create()
-        lv.setOnItemClickListener { _, _, pos, _ ->
-            val chosen = shown[pos]
-            dlg.dismiss()
-            onAppChosen(chosen)
+
+        // El clic se atiende en cada fila con su propio AppItem (no por posición),
+        // así no se selecciona otra app si la lista cambia mientras se toca.
+        val rowAdapter = object : BaseAdapter() {
+            var items: List<AppItem> = all
+            override fun getCount(): Int = items.size
+            override fun getItem(position: Int): Any = items[position]
+            override fun getItemId(position: Int): Long = position.toLong()
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                val item = items[position]
+                val row = (convertView as? LinearLayout) ?: LinearLayout(this@MainActivity).also { l ->
+                    l.orientation = LinearLayout.VERTICAL
+                    l.setPadding(dp(8), dp(10), dp(8), dp(10))
+                    val t1 = TextView(this@MainActivity)
+                    t1.id = View.generateViewId()
+                    t1.textSize = 15f
+                    t1.setTextColor(col(R.color.white))
+                    val t2 = TextView(this@MainActivity)
+                    t2.id = View.generateViewId()
+                    t2.textSize = 11f
+                    t2.typeface = Typeface.MONOSPACE
+                    t2.setTextColor(col(R.color.gray))
+                    l.addView(t1)
+                    l.addView(t2)
+                }
+                (row.getChildAt(0) as TextView).text = item.label
+                val sub = row.getChildAt(1) as TextView
+                sub.text = item.pkg ?: "sin escaneo previo"
+                row.setOnClickListener {
+                    dlg.dismiss()
+                    onAppChosen(item)
+                }
+                return row
+            }
         }
+        lv.adapter = rowAdapter
+
+        search.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, a: Int) {}
+            override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val q = s.toString().trim().lowercase()
+                rowAdapter.items = all.filter {
+                    q.isEmpty() || it.label.lowercase().contains(q) || (it.pkg ?: "").lowercase().contains(q)
+                }
+                rowAdapter.notifyDataSetChanged()
+            }
+        })
+
+        // Evita que el teclado se abra solo y mueva la lista mientras se toca
+        dlg.window?.setSoftInputMode(
+            android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN or
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
+        )
         dlg.show()
     }
 
     private fun onAppChosen(item: AppItem) {
         selPkg = item.pkg
         selLabel = item.label
+        toast("Seleccionada: ${item.label}")
         Prefs.setStr("sel_pkg", item.pkg)
         Prefs.setStr("sel_label", item.label)
         updateSelection()
@@ -318,6 +356,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             val r = try { AppScanner.scan(applicationContext, pkg) } catch (e: Exception) { null }
             runOnUiThread {
+                if (pkg != selPkg) return@runOnUiThread // se eligió otra app mientras se escaneaba
                 if (r == null) {
                     tvAppReport.text = "No se pudo escanear la app (¿fue desinstalada?)."
                 } else {
