@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_main"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="14dp">
 
     <TextView
         android:id="@+id/tvSys"
@@ -13,177 +13,522 @@
         android:fontFamily="monospace"
         android:text="SYS://UNDERCODE.ORG · IDLE"
         android:textColor="@color/gray"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:fontFamily="monospace"
-        android:text="root@undercode:~$ ./traffic-sniffer --live"
-        android:textColor="@color/cyan"
-        android:textSize="13sp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
         android:fontFamily="monospace"
         android:text="SNIFFER"
         android:textColor="@color/white"
-        android:textSize="34sp"
+        android:textSize="26sp"
         android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/bg_card"
-        android:fontFamily="monospace"
-        android:padding="12dp"
-        android:text="[!] solo analiza el tráfico de ESTE dispositivo. el túnel descarta los paquetes (no hay reenvío), por eso la conexión se corta mientras está activo."
-        android:textColor="@color/gray"
-        android:textSize="12sp" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnStart"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:layout_marginTop="14dp"
-        android:background="@drawable/bg_btn_cyan"
-        android:fontFamily="monospace"
-        android:text="[ INICIAR CAPTURA ]"
-        android:textColor="@color/bg_main"
-        android:textStyle="bold" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/btnStop"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_btn_red"
-        android:fontFamily="monospace"
-        android:text="[ DETENER ]"
-        android:textColor="@color/red" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal">
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/tabApp"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:background="@drawable/bg_card"
-            android:orientation="vertical"
-            android:padding="10dp">
-
-            <TextView
-                android:id="@+id/tvPackets"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="0"
-                android:textColor="@color/cyan"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="PAQUETES"
-                android:textColor="@color/gray"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_marginEnd="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_card"
-            android:orientation="vertical"
-            android:padding="10dp">
-
-            <TextView
-                android:id="@+id/tvBytes"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="0 B"
-                android:textColor="@color/cyan"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="BYTES"
-                android:textColor="@color/gray"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_card"
-            android:orientation="vertical"
-            android:padding="10dp">
-
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="OFF"
-                android:textColor="@color/red"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="ESTADO"
-                android:textColor="@color/gray"
-                android:textSize="11sp" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:fontFamily="monospace"
-        android:text="UNDERCODE - SNIFFER.LOG"
-        android:textColor="@color/gray"
-        android:textSize="12sp" />
-
-    <ScrollView
-        android:id="@+id/scrollLog"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="6dp"
-        android:layout_weight="1"
-        android:background="@drawable/bg_log"
-        android:padding="10dp">
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:text="APP"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tvLog"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:id="@+id/tabConn"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card"
             android:fontFamily="monospace"
-            android:text="$ tail -f /var/log/sniffer.log\n"
-            android:textColor="@color/cyan"
-            android:textIsSelectable="true"
-            android:textSize="11sp" />
-    </ScrollView>
+            android:gravity="center"
+            android:text="CONEXIONES"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabTools"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:text="HERRAMIENTAS"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1">
+
+        <!-- ============ PANEL APP ============ -->
+        <ScrollView
+            android:id="@+id/panelApp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnPick"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ ELEGIR APP ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvAppReport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_card"
+                    android:fontFamily="monospace"
+                    android:padding="12dp"
+                    android:text="Elige una app para escanearla antes de capturar, o captura todas las apps."
+                    android:textColor="@color/gray"
+                    android:textSize="11sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_btn_cyan"
+                    android:fontFamily="monospace"
+                    android:text="[ INICIAR CAPTURA ]"
+                    android:textColor="@color/bg_main"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnStop"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_btn_red"
+                    android:fontFamily="monospace"
+                    android:text="[ DETENER ]"
+                    android:textColor="@color/red" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="PAQUETES"
+                            android:textColor="@color/gray"
+                            android:textSize="9sp" />
+
+                        <TextView
+                            android:id="@+id/tvPackets"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="0"
+                            android:textColor="@color/cyan"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="BYTES"
+                            android:textColor="@color/gray"
+                            android:textSize="9sp" />
+
+                        <TextView
+                            android:id="@+id/tvBytes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="0 B"
+                            android:textColor="@color/cyan"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="ESTADO"
+                            android:textColor="@color/gray"
+                            android:textSize="9sp" />
+
+                        <TextView
+                            android:id="@+id/tvStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="OFF"
+                            android:textColor="@color/red"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="DESTINOS"
+                            android:textColor="@color/gray"
+                            android:textSize="9sp" />
+
+                        <TextView
+                            android:id="@+id/tvConns"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="0"
+                            android:textColor="@color/cyan"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_card"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="ALERTAS ROJAS / ÁMBAR"
+                            android:textColor="@color/gray"
+                            android:textSize="9sp" />
+
+                        <TextView
+                            android:id="@+id/tvReds"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="0 / 0"
+                            android:textColor="@color/white"
+                            android:textSize="17sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvLog"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_log"
+                    android:fontFamily="monospace"
+                    android:minHeight="90dp"
+                    android:padding="10dp"
+                    android:textColor="@color/green"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ============ PANEL CONEXIONES ============ -->
+        <LinearLayout
+            android:id="@+id/panelConn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:textColor="@color/gray"
+                android:textSize="10sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/fAll"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:fontFamily="monospace"
+                    android:gravity="center"
+                    android:text="TODAS"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/fRed"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:fontFamily="monospace"
+                    android:gravity="center"
+                    android:text="ROJAS"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/fAmber"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:fontFamily="monospace"
+                    android:gravity="center"
+                    android:text="ÁMBAR"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/fTime"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1.4"
+                    android:background="@drawable/bg_card"
+                    android:fontFamily="monospace"
+                    android:gravity="center"
+                    android:text="LÍNEA TIEMPO"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <ListView
+                android:id="@+id/listConn"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="6dp"
+                android:layout_weight="1"
+                android:divider="#1E2A3A"
+                android:dividerHeight="1dp" />
+        </LinearLayout>
+
+        <!-- ============ PANEL HERRAMIENTAS ============ -->
+        <ScrollView
+            android:id="@+id/panelTools"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:text="LISTAS DE AMENAZAS (IoC)"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvIoc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/gray"
+                    android:textSize="11sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnUpdate"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ ACTUALIZAR LISTAS ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnAddIoc"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ AÑADIR IoC MANUAL ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="monospace"
+                    android:text="REGLAS Y OPCIONES"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/rulesContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="monospace"
+                    android:text="EXPORTAR"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnPcap"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ EXPORTAR PCAP (WIRESHARK) ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnHtml"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ INFORME HTML ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnJson"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ INFORME JSON ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="monospace"
+                    android:text="DATOS"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ HISTORIAL DE SESIONES ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnLists"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_ghost"
+                    android:fontFamily="monospace"
+                    android:text="[ BLOQUEADOS Y CONFIABLES ]"
+                    android:textColor="@color/cyan"
+                    android:textSize="12sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnClear"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_btn_red"
+                    android:fontFamily="monospace"
+                    android:text="[ LIMPIAR DATOS DE LA SESIÓN ]"
+                    android:textColor="@color/red"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
 </LinearLayout>

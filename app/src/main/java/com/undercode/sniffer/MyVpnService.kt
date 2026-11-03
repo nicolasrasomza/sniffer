@@ -3,47 +3,41 @@ package com.undercode.sniffer
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.VpnService
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.atomic.AtomicLong
-
-/** Puente simple entre el servicio y la UI. */
-object CaptureBus {
-    @Volatile var running = false
-    val packets = AtomicLong(0)
-    val bytes = AtomicLong(0)
-    @Volatile var listener: ((String) -> Unit)? = null
-    private val main = Handler(Looper.getMainLooper())
-    private val fmt = SimpleDateFormat("HH:mm:ss", Locale.US)
-
-    fun log(msg: String) {
-        val line = "${fmt.format(Date())} $msg"
-        main.post { listener?.invoke(line) }
-    }
-}
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 class MyVpnService : VpnService() {
 
     companion object {
         const val ACTION_START = "com.undercode.sniffer.START"
         const val ACTION_STOP = "com.undercode.sniffer.STOP"
+        const val EXTRA_PKG = "pkg"
+        const val EXTRA_LABEL = "label"
         private const val CHANNEL_ID = "sniffer"
         private const val NOTIF_ID = 1
     }
 
     private var tun: ParcelFileDescriptor? = null
     private var worker: Thread? = null
+    private var forwarder: Forwarder? = null
+    private var exec: ScheduledExecutorService? = null
+    private var screenReceiver: BroadcastReceiver? = null
     @Volatile private var active = false
+    private var stopped = true
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -52,26 +46,38 @@ class MyVpnService : VpnService() {
                 stopSelf()
                 return START_NOT_STICKY
             }
-            else -> startCapture()
+            ACTION_START -> startCapture(intent)
+            else -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
-    private fun startCapture() {
-        if (active) return
+    private fun startCapture(intent: Intent) {
         startForeground(NOTIF_ID, buildNotification())
+        if (active) return
+        Engine.init(this)
+
+        val pkg = intent.getStringExtra(EXTRA_PKG)
+        val label = intent.getStringExtra(EXTRA_LABEL) ?: pkg ?: "Todas las apps"
 
         val builder = Builder()
             .setSession("undercode-sniffer")
             .setMtu(1500)
             .addAddress("10.8.0.2", 32)
-            .addRoute("0.0.0.0", 0)          // todo el IPv4 pasa por el túnel
-            .addDnsServer("1.1.1.1")         // las consultas DNS también pasan por el túnel
+            .addRoute("0.0.0.0", 0)
+            .addDnsServer("1.1.1.1")
             .setBlocking(true)
 
         try {
-            builder.addDisallowedApplication(packageName)   // excluye esta app
-        } catch (_: Exception) {
+            if (pkg != null) builder.addAllowedApplication(pkg)
+            else builder.addDisallowedApplication(packageName)
+        } catch (e: PackageManager.NameNotFoundException) {
+            Engine.log("[!] la app seleccionada ya no está instalada")
+            stopSelf()
+            return
         }
 
         tun = try {
@@ -79,53 +85,104 @@ class MyVpnService : VpnService() {
         } catch (e: Exception) {
             null
         }
-
-        if (tun == null) {
-            CaptureBus.log("[!] no se pudo establecer la interfaz TUN (¿permiso revocado?)")
+        val fd = tun
+        if (fd == null) {
+            Engine.log("[!] no se pudo establecer la interfaz TUN (¿permiso revocado?)")
             stopSelf()
             return
         }
 
-        active = true
-        CaptureBus.running = true
-        CaptureBus.packets.set(0)
-        CaptureBus.bytes.set(0)
-        CaptureBus.log("[+] tun0 arriba · 10.8.0.2/32 · mtu 1500")
+        Engine.clearData()
+        Engine.sessionStart = System.currentTimeMillis()
+        Engine.sessionEnd = 0L
+        Engine.sessionPkg = pkg
+        Engine.sessionLabel = label
+        Engine.screenOn = getSystemService(PowerManager::class.java)?.isInteractive ?: true
 
-        worker = Thread({ readLoop() }, "sniffer-tun-reader").also { it.start() }
+        var pcap: PcapWriter? = null
+        if (Prefs.bool("save_pcap", true)) {
+            try {
+                pcap = PcapWriter(File(filesDir, "capture.pcap"), 64L * 1024 * 1024)
+            } catch (_: Exception) {
+            }
+        }
+        Engine.pcap = pcap
+
+        val fwd = Forwarder(this, FileOutputStream(fd.fileDescriptor), pcap, pkg, label)
+        forwarder = fwd
+
+        screenReceiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, i: Intent?) {
+                Engine.screenOn = i?.action != Intent.ACTION_SCREEN_OFF
+            }
+        }
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        })
+
+        active = true
+        stopped = false
+        Engine.running = true
+        Engine.log("[+] tun0 arriba · objetivo: $label")
+
+        worker = Thread({ readLoop(fd, fwd) }, "sniffer-tun-reader").also {
+            it.isDaemon = true
+            it.start()
+        }
+        exec = Executors.newSingleThreadScheduledExecutor().also { e ->
+            e.scheduleWithFixedDelay({
+                try {
+                    fwd.janitor()
+                    Engine.evaluateAll()
+                } catch (_: Exception) {
+                }
+            }, 2, 2, TimeUnit.SECONDS)
+        }
     }
 
-    private fun readLoop() {
-        val fd = tun ?: return
+    private fun readLoop(fd: ParcelFileDescriptor, fwd: Forwarder) {
         val input = FileInputStream(fd.fileDescriptor)
         val buf = ByteArray(32767)
         try {
             while (active) {
-                val n = input.read(buf)          // bloqueante: bytes crudos de un paquete IP
+                val n = input.read(buf)
                 if (n <= 0) continue
-                CaptureBus.packets.incrementAndGet()
-                CaptureBus.bytes.addAndGet(n.toLong())
-                PacketParser.describe(buf, n)?.let { CaptureBus.log(it) }
+                try {
+                    fwd.handlePacket(buf, n)
+                } catch (e: Exception) {
+                    Engine.log("[!] error procesando paquete: ${e.javaClass.simpleName}")
+                }
             }
         } catch (e: IOException) {
-            if (active) CaptureBus.log("[!] error de lectura: ${e.message}")
+            if (active) Engine.log("[!] error de lectura: ${e.message}")
         } finally {
-            CaptureBus.log("[-] hilo de captura finalizado")
+            Engine.log("[-] hilo de captura finalizado")
         }
     }
 
     private fun stopCapture() {
+        if (stopped) return
+        stopped = true
         active = false
-        CaptureBus.running = false
-        try { tun?.close() } catch (_: IOException) {}   // desbloquea el read()
+        Engine.running = false
+        Engine.sessionEnd = System.currentTimeMillis()
+        try { screenReceiver?.let { unregisterReceiver(it) } } catch (_: Exception) {}
+        screenReceiver = null
+        exec?.shutdownNow()
+        exec = null
+        try { forwarder?.shutdown() } catch (_: Exception) {}
+        forwarder = null
+        try { tun?.close() } catch (_: IOException) {}
         tun = null
-        worker?.interrupt()
         worker = null
+        Engine.pcap?.close()
+        try { SessionStore.saveCurrent(this) } catch (_: Exception) {}
         stopForeground(STOP_FOREGROUND_REMOVE)
+        Engine.log("[-] captura detenida")
     }
 
     override fun onRevoke() {
-        // El usuario o el sistema revocó la VPN
         stopCapture()
         super.onRevoke()
     }
@@ -137,100 +194,14 @@ class MyVpnService : VpnService() {
 
     private fun buildNotification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Sniffer", NotificationManager.IMPORTANCE_LOW)
-            )
-        }
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, "Sniffer", NotificationManager.IMPORTANCE_LOW)
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentTitle("Undercode Sniffer")
-            .setContentText("Capturando tráfico de este dispositivo")
+            .setContentText("Analizando tráfico")
             .setOngoing(true)
             .build()
-    }
-}
-
-/** Parser mínimo de cabeceras IPv4/IPv6, TCP, UDP, ICMP y nombre DNS. */
-object PacketParser {
-
-    private fun u8(b: ByteArray, i: Int) = b[i].toInt() and 0xFF
-    private fun u16(b: ByteArray, i: Int) = (u8(b, i) shl 8) or u8(b, i + 1)
-    private fun ip4(b: ByteArray, i: Int) =
-        "${u8(b, i)}.${u8(b, i + 1)}.${u8(b, i + 2)}.${u8(b, i + 3)}"
-
-    private fun ip6(b: ByteArray, i: Int): String =
-        (0 until 8).joinToString(":") { "%x".format(u16(b, i + it * 2)) }
-
-    fun describe(p: ByteArray, len: Int): String? {
-        if (len < 20) return null
-        return when (u8(p, 0) shr 4) {
-            4 -> describeV4(p, len)
-            6 -> describeV6(p, len)
-            else -> null
-        }
-    }
-
-    private fun describeV4(p: ByteArray, len: Int): String? {
-        val ihl = (u8(p, 0) and 0x0F) * 4
-        if (ihl < 20 || len < ihl) return null
-        val proto = u8(p, 9)
-        val src = ip4(p, 12)
-        val dst = ip4(p, 16)
-        return "IPv4 " + l4(proto, p, ihl, len, src, dst)
-    }
-
-    private fun describeV6(p: ByteArray, len: Int): String? {
-        if (len < 40) return null
-        val next = u8(p, 6)
-        return "IPv6 " + l4(next, p, 40, len, ip6(p, 8), ip6(p, 24))
-    }
-
-    private fun l4(proto: Int, p: ByteArray, off: Int, len: Int, src: String, dst: String): String {
-        return when (proto) {
-            6 -> { // TCP
-                if (len < off + 14) return "TCP $src -> $dst"
-                val sp = u16(p, off)
-                val dp = u16(p, off + 2)
-                val f = u8(p, off + 13)
-                val flags = buildString {
-                    if (f and 0x02 != 0) append("SYN ")
-                    if (f and 0x10 != 0) append("ACK ")
-                    if (f and 0x01 != 0) append("FIN ")
-                    if (f and 0x04 != 0) append("RST ")
-                    if (f and 0x08 != 0) append("PSH ")
-                }.trim()
-                "TCP $src:$sp -> $dst:$dp [$flags] len=$len"
-            }
-            17 -> { // UDP
-                if (len < off + 8) return "UDP $src -> $dst"
-                val sp = u16(p, off)
-                val dp = u16(p, off + 2)
-                val base = "UDP $src:$sp -> $dst:$dp len=$len"
-                if (dp == 53) {
-                    dnsName(p, off + 8, len)?.let { return "$base DNS? $it" }
-                }
-                base
-            }
-            1, 58 -> "ICMP $src -> $dst len=$len"
-            else -> "PROTO($proto) $src -> $dst len=$len"
-        }
-    }
-
-    /** Extrae el QNAME de una consulta DNS (sin compresión). */
-    private fun dnsName(p: ByteArray, dnsOff: Int, len: Int): String? {
-        var i = dnsOff + 12
-        if (i >= len) return null
-        val sb = StringBuilder()
-        while (i < len) {
-            val l = u8(p, i)
-            if (l == 0) break
-            if (l and 0xC0 != 0) return null
-            i++
-            if (i + l > len) return null
-            sb.append(String(p, i, l, Charsets.US_ASCII)).append('.')
-            i += l
-        }
-        return sb.toString().trimEnd('.').ifEmpty { null }
     }
 }

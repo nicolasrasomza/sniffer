@@ -8,4 +8,5 @@
     <color name="cyan">#00E5FF</color>
     <color name="red">#FF5252</color>
     <color name="green">#4CAF50</color>
+    <color name="amber">#FFB300</color>
 </resources>
