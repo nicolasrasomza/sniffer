@@ -15,6 +15,8 @@ import java.util.Date
 import java.util.Locale
 
 /** Exporta PCAP e informes (HTML / JSON) a la carpeta Descargas/UndercodeSniffer. */
+private const val HTTP_SHOWN_CHARS = 1500
+
 object Exporter {
     private val stamp get() = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
 
@@ -99,6 +101,7 @@ object Exporter {
         sb.append("h1,h2{color:#00e5ff}table{border-collapse:collapse;width:100%;margin:8px 0}")
         sb.append("td,th{border-bottom:1px solid #1e2a3a;padding:5px 8px;text-align:left;font-size:12px;vertical-align:top}")
         sb.append(".dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}")
+        sb.append("h3{color:#9fb3c8;font-size:13px;margin:16px 0 4px}.warn{color:#ffb300}")
         sb.append(".g{color:#8a97a8}pre{white-space:pre-wrap;background:#121826;padding:10px;border-radius:6px}</style></head><body>")
         sb.append("<h1>Undercode Sniffer · Informe de captura</h1>")
         sb.append("<p class=\"g\">Generado: ${df.format(Date())}</p>")
@@ -130,6 +133,20 @@ object Exporter {
             sb.append("<td>${r.flows.get()}</td><td>${esc(r.reasonText.joinToString(" · "))}</td></tr>")
         }
         sb.append("</table>")
+
+        val withHttp = recs.filter { it.httpSamplesList().isNotEmpty() }
+        if (withHttp.isNotEmpty()) {
+            sb.append("<h2>Contenido HTTP sin cifrar</h2>")
+            sb.append("<p class=\"warn\">⚠ Este bloque puede contener contraseñas, tokens o datos personales en texto plano. Compártelo con cuidado.</p>")
+            sb.append("<p class=\"g\">Se muestran los primeros ${HTTP_SHOWN_CHARS} caracteres de cada mensaje (hasta 30 por destino). Los cuerpos binarios o comprimidos aparecen con puntos.</p>")
+            for (r in withHttp) {
+                sb.append("<h3>${esc(r.title())} · ${esc(r.appLabel)}</h3>")
+                for (h in r.httpSamplesList()) {
+                    sb.append("<div class=\"g\">${tf.format(Date(h.time))} · ${if (h.up) "↑ petición" else "↓ respuesta"}</div>")
+                    sb.append("<pre>${esc(h.text)}</pre>")
+                }
+            }
+        }
 
         sb.append("<h2>Línea de tiempo (últimos 500 eventos)</h2><table><tr><th>Hora</th><th>Pantalla</th><th>Nivel</th><th>Evento</th></tr>")
         for (e in Engine.eventsSnapshot().takeLast(500)) {
@@ -184,6 +201,15 @@ object Exporter {
             c.put("first_seen", r.firstSeen)
             c.put("last_seen", r.lastSeen)
             c.put("reasons", JSONArray(r.reasonText))
+            val http = JSONArray()
+            for (h in r.httpSamplesList()) {
+                val x = JSONObject()
+                x.put("time", h.time)
+                x.put("direction", if (h.up) "request" else "response")
+                x.put("text", h.text)
+                http.put(x)
+            }
+            c.put("http_cleartext", http)
             arr.put(c)
         }
         o.put("connections", arr)

@@ -24,6 +24,12 @@ enum class Rule(val id: String, val title: String, val points: Int, val defaultO
     PORT_SCAN("port_scan", "Escaneo de puertos", 40)
 }
 
+private const val HTTP_SAMPLE_MAX = 1500   // caracteres guardados por mensaje HTTP
+private const val HTTP_SAMPLES_PER_REC = 30  // mensajes guardados por destino
+
+/** Fragmento de texto de un mensaje HTTP sin cifrar (petición o respuesta). */
+class HttpSample(val time: Long, val up: Boolean, val text: String)
+
 /** Un destino (ip:puerto o consulta DNS) agregado por app y protocolo. */
 class ConnRecord(
     val key: String,
@@ -60,6 +66,37 @@ class ConnRecord(
     private val sensitiveSet = LinkedHashSet<String>()
     fun addSensitive(items: Set<String>) { synchronized(sensitiveSet) { sensitiveSet.addAll(items) } }
     fun sensitiveList(): List<String> = synchronized(sensitiveSet) { ArrayList(sensitiveSet) }
+
+    private val httpSamples = ArrayList<HttpSample>()
+
+    /**
+     * Guarda (acotado) el texto de un mensaje HTTP en claro.
+     * [newMsg] = true si empieza una petición / respuesta; false si continúa la anterior (p. ej. cuerpo de un POST).
+     */
+    fun addHttp(up: Boolean, newMsg: Boolean, b: ByteArray, off: Int, len: Int) {
+        if (len <= 0) return
+        val n = minOf(len, HTTP_SAMPLE_MAX)
+        val raw = String(b, off, n, Charsets.UTF_8)
+        val sb = StringBuilder(raw.length)
+        for (ch in raw) {
+            sb.append(if (ch == '\n' || ch == '\r' || ch == '\t' || (ch.code >= 32 && ch != '\uFFFD' && ch.code != 127)) ch else '.')
+        }
+        synchronized(httpSamples) {
+            val last = httpSamples.lastOrNull()
+            if (!newMsg) {
+                // continuación: se pega al mensaje anterior si es del mismo sentido y aún hay sitio
+                if (last != null && last.up == up && last.text.length < HTTP_SAMPLE_MAX) {
+                    val room = HTTP_SAMPLE_MAX - last.text.length
+                    httpSamples[httpSamples.size - 1] = HttpSample(last.time, up, last.text + sb.substring(0, minOf(room, sb.length)))
+                }
+                return
+            }
+            if (httpSamples.size >= HTTP_SAMPLES_PER_REC) return
+            httpSamples.add(HttpSample(System.currentTimeMillis(), up, sb.toString()))
+        }
+    }
+
+    fun httpSamplesList(): List<HttpSample> = synchronized(httpSamples) { ArrayList(httpSamples) }
 
     private val starts = ArrayList<Long>()
     fun noteStart() {

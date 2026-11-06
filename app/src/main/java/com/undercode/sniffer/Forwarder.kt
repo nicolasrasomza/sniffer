@@ -68,7 +68,7 @@ class Forwarder(
         val head = ByteArray(4096)
         var headLen = 0
         var parsedHead = false
-        var isHttp = false
+        @Volatile var isHttp = false
         var httpScanned = 0
     }
 
@@ -375,6 +375,7 @@ class Forwarder(
                         f.rec.bytesDown.addAndGet(n.toLong())
                         f.lastActive = System.currentTimeMillis()
                         f.rec.lastSeen = f.lastActive
+                        if (f.isHttp) f.rec.addHttp(false, Http.isResponse(buf, n), buf, 0, n)
                     }
                 }
             }
@@ -450,6 +451,7 @@ class Forwarder(
                     f.parsedHead = true
                     rec.cleartext = true
                     Http.host(f.head, f.headLen)?.let { rec.addName(it) }
+                    rec.addHttp(true, true, f.head, 0, f.headLen)
                     val s = Http.scan(f.head, 0, f.headLen)
                     if (s.isNotEmpty()) rec.addSensitive(s)
                     f.httpScanned = f.headLen
@@ -460,6 +462,7 @@ class Forwarder(
             }
         } else if (f.isHttp && f.httpScanned < 65536) {
             f.httpScanned += data.size
+            rec.addHttp(true, Http.isRequest(data, data.size), data, 0, data.size)
             val s = Http.scan(data, 0, data.size)
             if (s.isNotEmpty()) {
                 rec.addSensitive(s)

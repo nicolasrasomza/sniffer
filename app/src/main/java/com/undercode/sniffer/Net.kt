@@ -286,6 +286,11 @@ object Http {
         return methods.any { s.startsWith(it) }
     }
 
+    fun isResponse(b: ByteArray, len: Int): Boolean {
+        if (len < 5) return false
+        return String(b, 0, 5, Charsets.ISO_8859_1) == "HTTP/"
+    }
+
     fun host(b: ByteArray, len: Int): String? {
         val s = String(b, 0, minOf(len, 2048), Charsets.ISO_8859_1)
         val i = s.indexOf("\r\nHost:", ignoreCase = true)
