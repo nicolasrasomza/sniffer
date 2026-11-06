@@ -2,8 +2,10 @@ package com.undercode.sniffer
 
 import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -27,27 +29,49 @@ object Exporter {
         return "Descargas/UndercodeSniffer/$name"
     }
 
-    fun exportPcap(ctx: Context): String {
+    /** Resultado de una exportación: mensaje + Uri compartible (null si no hay archivo). */
+    class ExportResult(val message: String, val uri: Uri?, val mime: String, val name: String)
+
+    /**
+     * Genera el archivo en la caché de la app (para poder compartirlo) y además lo copia
+     * a Descargas/UndercodeSniffer.
+     */
+    private fun export(ctx: Context, name: String, mime: String, write: (OutputStream) -> Unit): ExportResult {
+        val dir = File(ctx.cacheDir, "exports")
+        dir.mkdirs()
+        dir.listFiles()?.forEach { it.delete() }
+        val f = File(dir, name)
+        f.outputStream().use { write(it) }
+        val saved = try {
+            saveToDownloads(ctx, name, mime) { out -> f.inputStream().use { it.copyTo(out) } }
+        } catch (_: Exception) {
+            null
+        }
+        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", f)
+        val msg = if (saved != null) "Guardado en $saved\n\n¿Quieres enviarlo por WhatsApp, correo u otra app?"
+        else "No se pudo guardar en Descargas, pero puedes compartirlo ahora."
+        return ExportResult(msg, uri, mime, name)
+    }
+
+    fun exportPcap(ctx: Context): ExportResult {
         Engine.pcap?.flush()
         val f = File(ctx.filesDir, "capture.pcap")
-        if (!f.exists() || f.length() <= 24) return "No hay ninguna captura PCAP todavía (inicia una captura con \"Guardar PCAP\" activado)."
-        val name = "captura_$stamp.pcap"
-        val r = saveToDownloads(ctx, name, "application/vnd.tcpdump.pcap") { out -> f.inputStream().use { it.copyTo(out) } }
-        return if (r != null) "PCAP guardado en $r" else "No se pudo guardar el archivo."
+        if (!f.exists() || f.length() <= 24) {
+            return ExportResult("No hay ninguna captura PCAP todavía (inicia una captura con \"Guardar PCAP\" activado).", null, "", "")
+        }
+        return export(ctx, "captura_$stamp.pcap", "application/vnd.tcpdump.pcap") { out ->
+            f.inputStream().use { it.copyTo(out) }
+        }
     }
 
-    fun exportHtml(ctx: Context): String {
-        val name = "informe_$stamp.html"
+    fun exportHtml(ctx: Context): ExportResult {
         val html = buildHtml()
-        val r = saveToDownloads(ctx, name, "text/html") { it.write(html.toByteArray(Charsets.UTF_8)) }
-        return if (r != null) "Informe guardado en $r" else "No se pudo guardar el informe."
+        return export(ctx, "informe_$stamp.html", "text/html") { it.write(html.toByteArray(Charsets.UTF_8)) }
     }
 
-    fun exportJson(ctx: Context): String {
-        val name = "informe_$stamp.json"
+    fun exportJson(ctx: Context): ExportResult {
         val json = buildJson().toString(2)
-        val r = saveToDownloads(ctx, name, "application/json") { it.write(json.toByteArray(Charsets.UTF_8)) }
-        return if (r != null) "JSON guardado en $r" else "No se pudo guardar el informe."
+        return export(ctx, "informe_$stamp.json", "application/json") { it.write(json.toByteArray(Charsets.UTF_8)) }
     }
 
     private fun sortedRecords(): List<ConnRecord> =

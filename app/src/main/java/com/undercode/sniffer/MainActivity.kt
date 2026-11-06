@@ -596,11 +596,39 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun runExport(task: () -> String) {
+    private fun runExport(task: () -> Exporter.ExportResult) {
+        Toast.makeText(this, "Generando archivo…", Toast.LENGTH_SHORT).show()
         Thread {
-            val m = try { task() } catch (e: Exception) { "Error: ${e.message}" }
-            runOnUiThread { info("Exportar", m) }
+            val r = try {
+                task()
+            } catch (e: Exception) {
+                Exporter.ExportResult("Error: ${e.message}", null, "", "")
+            }
+            runOnUiThread { showExportResult(r) }
         }.start()
+    }
+
+    private fun showExportResult(r: Exporter.ExportResult) {
+        val b = AlertDialog.Builder(this)
+            .setTitle("Exportar")
+            .setMessage(r.message)
+            .setNegativeButton("Cerrar", null)
+        if (r.uri != null) b.setPositiveButton("Compartir") { _, _ -> shareFile(r) }
+        b.show()
+    }
+
+    private fun shareFile(r: Exporter.ExportResult) {
+        try {
+            val i = Intent(Intent.ACTION_SEND)
+                .setType(r.mime)
+                .putExtra(Intent.EXTRA_STREAM, r.uri)
+                .putExtra(Intent.EXTRA_SUBJECT, "Sniffer UC · ${r.name}")
+                .putExtra(Intent.EXTRA_TEXT, "Archivo generado con Sniffer UC")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(Intent.createChooser(i, "Compartir con…"))
+        } catch (e: Exception) {
+            toast("No se pudo abrir el menú de compartir")
+        }
     }
 
     private fun showHistory() {
